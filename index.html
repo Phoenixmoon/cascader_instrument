@@ -86,6 +86,20 @@
   z-index: 1000;
 }
 
+#cascade-display {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #f2cd75;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-family: "Papyrus", fantasy;
+            font-size: 24px;
+            text-shadow: 3px 3px 3px #71520b;
+            z-index: 1000;
+        }
+
 
 
 
@@ -103,6 +117,8 @@
 <div>
 
     <div id="octave-display">Octave: 4</div>
+
+    <div id="cascade-display">Cascade: → </div>
 
 </div>
 
@@ -154,6 +170,9 @@ const sharpMap = {
 let OCTAVE = 4;
 const UP_KEY = "ArrowUp";
 const DOWN_KEY = "ArrowDown";
+const LEFT_KEY = "ArrowLeft";
+const RIGHT_KEY = "ArrowRight";
+let CASCADE = 1;
 
 const synth = new Tone.PolySynth().toDestination()
 
@@ -335,10 +354,43 @@ function release(e) {
 }
 
 
+function attack_down(e) {
+  const obj = keyMap[e];
+
+  if (obj && !obj.pressed) {
+    obj.pressed = true;
+    const mainNote = obj.note + OCTAVE;
+    
+    synth.triggerAttack(mainNote); // Play the main note
+
+    obj.harmonic1 = Tone.Frequency(mainNote).transpose(-3).toNote();
+    obj.harmonicTimeout1 = setTimeout(() => {
+      if (obj.pressed) synth.triggerAttack(obj.harmonic1);
+    }, 100);
+
+    // Second harmonic: Perfect fifth (+7 semitones)
+    obj.harmonic2 = Tone.Frequency(mainNote).transpose(-5).toNote();
+    obj.harmonicTimeout2 = setTimeout(() => {
+      if (obj.pressed) synth.triggerAttack(obj.harmonic2);
+    }, 200);
+
+    obj.harmonic3 = Tone.Frequency(mainNote).transpose(-12).toNote();
+    obj.harmonicTimeout3 = setTimeout(() => {
+      if (obj.pressed) synth.triggerAttack(obj.harmonic3);
+    }, 300);
+  }
+}
+
+
 function updateOctaveDisplay() {
   const octaveDisplay = document.getElementById('octave-display');
   octaveDisplay.textContent = `Octave: ${OCTAVE}`;
 }
+
+function updateCascadeDisplay() {
+            const display = document.getElementById("cascade-display");
+            display.innerHTML = `Cascade: ${CASCADE ? "→" : "←"}`;
+        }
 
 document.addEventListener("keydown", function (event) {
   const keyPressed = event.key;
@@ -356,10 +408,21 @@ document.addEventListener("keydown", function (event) {
         OCTAVE = 1;
       }
       updateOctaveDisplay();
+    } else if (keyPressed == LEFT_KEY) {
+      CASCADE = 0;
+      updateCascadeDisplay();
+    } else if (keyPressed == RIGHT_KEY) {
+      CASCADE = 1;
+      updateCascadeDisplay();
     }
   } else {
     let processedKey = event.shiftKey && sharpMap[keyPressed] ? sharpMap[keyPressed] : keyPressed;
-    attack(processedKey);
+    if (CASCADE) {
+        attack(processedKey);
+    } else {
+        attack_down(processedKey);
+    }
+    
   }
 });
   
