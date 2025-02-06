@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- <meta name="viewport" content="width=device-width, initial-scale=1.0"> -->
+    <title>Synthetic Instrument</title>
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.0/lame.min.js"></script>
+    <script src="https://unpkg.com/tone"></script>
+<script src="https://cdn.jsdelivr.net/gh/netizenorg/netnet-standard-library/build/nn.min.js?v=1"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script src="https://algorithmicmusic.online/js/create-spectrum.js"></script>
+<script src="https://algorithmicmusic.online/js/create-waveform.js"></script>
+
+    <style>
+        body {
+            background-repeat: no-repeat;
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            margin: 0;
+            font-family: "Palatino Linotype", "Book Antiqua", Palatino, serif;
+        }
+
+        h1 {
+   /* color: #936b0e; */
+   text-align: center;
+   padding-top: 60px;
+   padding-bottom: 20px;
+   font-family: "Papyrus", fantasy;
+   font-size: 100px;
+   font-weight: bold;
+   /* text-shadow: 3px 3px 5px black; */
+   width: 75%;
+   margin: 0 auto;
+
+  background: -webkit-linear-gradient(#91672a, #caaf74);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(3px 3px 5px #71520b);
+
+}
+
+#transparentlayer {
+            /* background-color: rgba(50, 36, 5, 0.8); */
+            padding: 20px;
+            border-radius: 8px;
+            width: 50%;
+            margin: 20px auto;
+            text-align: center;
+            position: relative;
+        }
+
+        #thinlayer {
+            background-color: rgba(0, 0, 0, 0.466);
+            padding: 20px;
+            border-radius: 8px;
+            width: 50%;
+            margin: 20px auto;
+            text-align: center;
+            position: relative;
+        }
+
+#spectrograms {
+    display: flex;
+    justify-content: center;
+  align-items: center;
+}
+
+#wave {
+    display: flex;
+    justify-content: center;
+  align-items: center;
+}
+
+#octave-display {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: #f2cd75;
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-family: "Papyrus", fantasy;
+  font-size: 32px;
+  text-shadow: 3px 3px 3px #71520b;
+  z-index: 1000;
+}
+
+
+
+
+
+    </style>
+
+    <h1>
+    Cascader
+    </h1>
+</head>
+
+<body style="background-image: url('wmremove-transformed.png')">
+<!-- <body> -->
+
+<div>
+
+    <div id="octave-display">Octave: 4</div>
+
+</div>
+
+<div id="thinlayer">
+
+
+    <div id="transparentlayer">
+    
+    </div>
+    
+    <div id="wave">
+        <svg id="waveform-element"></svg>
+    </div>
+    <div id="spectrograms">
+    
+       
+        <svg id="spectrum-element"></svg>
+    
+    </div>
+</div>
+
+
+
+
+<script>
+const keyMap = {
+  a: { note: "A", pressed: false },
+  b: { note: "B", pressed: false },
+  c: { note: "C", pressed: false },
+  d: { note: "D", pressed: false },
+  e: { note: "E", pressed: false },
+  f: { note: "F", pressed: false },
+  g: { note: "G", pressed: false },
+  A: { note: "A#", pressed: false },
+  C: { note: "C#", pressed: false },
+  D: { note: "D#", pressed: false },
+  F: { note: "F#", pressed: false },
+  G: { note: "G#", pressed: false },
+};
+
+const sharpMap = {
+  a: "A",
+  c: "C",
+  d: "D",
+  f: "F",
+  g: "G",
+};
+
+let OCTAVE = 4;
+const UP_KEY = "ArrowUp";
+const DOWN_KEY = "ArrowDown";
+
+const synth = new Tone.PolySynth().toDestination()
+
+const presets = {
+  default: Tone.Synth.getDefaults(),
+
+  string: {
+    portamento: 0.0,
+    oscillator: {
+      type: 'square4'
+    },
+    envelope: {
+      attack: 2,
+      decay: 1,
+      sustain: 0.2,
+      release: 2
+    }
+  },
+
+
+  bouncy: {
+    oscillator: {
+      partials: [1, 0, 2, 0, 3]
+    },
+    envelope: {
+      attack: 0.001,
+      decay: 1.2,
+      sustain: 0,
+      release: 1.2
+    }
+  },
+}
+
+function applyPreset (e) {
+  const reset = Tone.Synth.getDefaults()
+  synth.set(reset)
+  const settings = presets[e.target.value]
+  synth.set(settings)
+}
+
+const presetNames = Object.keys(presets)
+
+
+const presetSelect = document.createElement('select');
+document.getElementById('transparentlayer').appendChild(presetSelect);
+
+// Populate the select element with options
+presetNames.forEach(name => {
+  const option = document.createElement('option');
+  option.value = name;
+  option.textContent = name;
+  presetSelect.appendChild(option);
+});
+
+// Style the select element
+presetSelect.style.position = 'absolute';
+presetSelect.style.top = '50%';
+presetSelect.style.left = '50%';
+presetSelect.style.transform = 'translate(-50%, -50%)';
+presetSelect.style.backgroundColor = '#caaf74'; // Transparent-ish gold background
+presetSelect.style.border = '2px #f2cd75'; // Optional: border to define the edges
+presetSelect.style.padding = '10px'; // Optional: padding for better appearance
+presetSelect.style.fontSize = '16px'; // Optional: adjust font size
+
+presetSelect.style.zIndex = '10'; // Ensure it's on top of other content
+
+
+// Function to handle the 'change' event
+
+function applyPreset() {
+  const selectedPreset = presetSelect.value;
+  console.log(`Selected preset: ${selectedPreset}`);
+
+  const settings = presets[selectedPreset];
+
+  if (!settings) {
+    console.error(`Preset "${selectedPreset}" not found.`);
+    return;
+  }
+
+  synth.set(settings);
+}
+
+
+
+// Add the 'change' event listener to the select element
+presetSelect.addEventListener('change', applyPreset);
+
+
+// function attack(e) {
+//   const obj = keyMap[e];
+
+//   if (obj && !obj.pressed) {
+//     obj.pressed = true;
+//     synth.triggerAttack(obj.note + OCTAVE); // Play the main note
+
+//     // First harmonic: Major third (+4 semitones)
+//     const harmonicNote1 = Tone.Frequency(obj.note + OCTAVE).transpose(4);
+
+//     obj.harmonicTimeout1 = setTimeout(() => {
+//       if (obj.pressed) {
+//         synth.triggerAttack(harmonicNote1);
+//         obj.harmonicPlaying1 = harmonicNote1;
+//       }
+//     }, 500);
+
+//     // Second harmonic: Perfect fifth (+7 semitones)
+//     const harmonicNote2 = Tone.Frequency(obj.note + OCTAVE).transpose(7);
+
+//     obj.harmonicTimeout2 = setTimeout(() => {
+//       if (obj.pressed) {
+//         synth.triggerAttack(harmonicNote2);
+//         obj.harmonicPlaying2 = harmonicNote2;
+//       }
+//     }, 800); // Delayed slightly more than the first harmonic
+//   }
+// }
+
+// function release(e) {
+//   const obj = keyMap[e];
+
+//   if (obj && obj.pressed) {
+//     synth.triggerRelease(obj.note + OCTAVE); // Release the main note
+
+//     // Release the harmonic if it's playing
+//     if (obj.harmonicPlaying) {
+//       synth.triggerRelease(obj.harmonicPlaying);
+//       obj.harmonicPlaying = null;
+//     }
+
+//     obj.pressed = false;
+//     clearTimeout(obj.harmonicTimeout); // Prevent harmonic from triggering if not played yet
+//   }
+// }
+
+function attack(e) {
+  const obj = keyMap[e];
+
+  if (obj && !obj.pressed) {
+    obj.pressed = true;
+    const mainNote = obj.note + OCTAVE;
+    
+    synth.triggerAttack(mainNote); // Play the main note
+
+    // First harmonic: Major third (+4 semitones)
+    obj.harmonic1 = Tone.Frequency(mainNote).transpose(4).toNote();
+    obj.harmonicTimeout1 = setTimeout(() => {
+      if (obj.pressed) synth.triggerAttack(obj.harmonic1);
+    }, 100);
+
+    // Second harmonic: Perfect fifth (+7 semitones)
+    obj.harmonic2 = Tone.Frequency(mainNote).transpose(7).toNote();
+    obj.harmonicTimeout2 = setTimeout(() => {
+      if (obj.pressed) synth.triggerAttack(obj.harmonic2);
+    }, 200);
+
+    obj.harmonic3 = Tone.Frequency(mainNote).transpose(12).toNote();
+    obj.harmonicTimeout3 = setTimeout(() => {
+      if (obj.pressed) synth.triggerAttack(obj.harmonic3);
+    }, 300);
+  }
+}
+
+function release(e) {
+  const obj = keyMap[e];
+
+  if (obj && obj.pressed) {
+    synth.triggerRelease(obj.note + OCTAVE); // Release main note
+
+    if (obj.harmonic1) synth.triggerRelease(obj.harmonic1);
+    if (obj.harmonic2) synth.triggerRelease(obj.harmonic2);
+    if (obj.harmonic3) synth.triggerRelease(obj.harmonic3);
+
+    obj.pressed = false;
+    clearTimeout(obj.harmonicTimeout1);
+    clearTimeout(obj.harmonicTimeout2);
+    clearTimeout(obj.harmonicTimeout3);
+  }
+}
+
+
+function updateOctaveDisplay() {
+  const octaveDisplay = document.getElementById('octave-display');
+  octaveDisplay.textContent = `Octave: ${OCTAVE}`;
+}
+
+document.addEventListener("keydown", function (event) {
+  const keyPressed = event.key;
+
+  if (!(keyPressed in keyMap)) {
+    if (keyPressed === UP_KEY) {
+      OCTAVE += 1;
+      if (OCTAVE > 7) {
+        OCTAVE = 7;
+      }
+      updateOctaveDisplay();
+    } else if (keyPressed === DOWN_KEY) {
+      OCTAVE -= 1;
+      if (OCTAVE < 1) {
+        OCTAVE = 1;
+      }
+      updateOctaveDisplay();
+    }
+  } else {
+    let processedKey = event.shiftKey && sharpMap[keyPressed] ? sharpMap[keyPressed] : keyPressed;
+    attack(processedKey);
+  }
+});
+  
+document.addEventListener("keyup", function (event) {
+ 
+  const keyReleased = event.key;
+
+  if (keyReleased in keyMap) {
+      release(keyReleased);
+  }
+});
+
+
+
+const wave = createWaveform({ele: '#waveform-element', color: '#f2cd75'})
+
+const spec = createSpectrum({ele: '#spectrum-element', range: [20, 7040], color: '#f2cd75' })
+
+
+
+
+synth.connect(wave)
+synth.connect(spec)
+
+
+
+
+</script>
+
+
+
+
+</body>
