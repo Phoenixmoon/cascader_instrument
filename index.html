@@ -102,18 +102,79 @@
 
 
 
+        .circle-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: -1;
+        }
+
+        .circle {
+            position: absolute;
+            border-radius: 50%;
+            mix-blend-mode: screen;
+            background-image: radial-gradient(
+                hsl(42,83%,57%),
+                hsl(42,83%,70%) 10%,
+                hsla(31, 100%, 80%, 0) 56%
+            );
+            animation: fade-frames 200ms infinite, scale-frames 2s infinite;
+        }
+
+        @keyframes fade-frames {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        @keyframes scale-frames {
+            0% { transform: scale3d(0.4, 0.4, 1); }
+            50% { transform: scale3d(2.2, 2.2, 1); }
+            100% { transform: scale3d(0.4, 0.4, 1); }
+        }
+
 
 
     </style>
 
-    <h1>
-    Cascader
-    </h1>
+    
 </head>
 
 <body style="background-image: url('wmremove-transformed.png')">
-<!-- <body> -->
 
+    
+    <div class="circle-container">
+        <script>
+            for (let i = 0; i < 200; i++) {
+                let div = document.createElement('div');
+                div.className = 'circle';
+                div.style.width = Math.random() * 8 + 8 + 'px';
+                div.style.height = div.style.width;
+                div.style.top = Math.random() * 100 + '%';
+                div.style.left = Math.random() * 100 + '%';
+                div.style.animation = `move-frames-${i} ${28000 + Math.random() * 9000}ms linear infinite`;
+                document.querySelector('.circle-container').appendChild(div);
+
+                let keyframes = `@keyframes move-frames-${i} {
+                    from {
+                        transform: translate3d(${Math.random() * 100}vw, ${Math.random() * 100}vh, 0);
+                    }
+                    to {
+                        transform: translate3d(${Math.random() * 100}vw, ${Math.random() * 100}vh, 0);
+                    }
+                }`;
+                let style = document.createElement('style');
+                style.innerHTML = keyframes;
+                document.head.appendChild(style);
+            }
+        </script>
+    </div>
+    <h1>
+        Cascader
+        </h1>
 <div>
 
     <div id="octave-display">Octave: 4</div>
@@ -219,7 +280,7 @@ const presetNames = Object.keys(presets)
 const presetSelect = document.createElement('select');
 document.getElementById('transparentlayer').appendChild(presetSelect);
 
-// Populate the select element with options
+// populates the select element w the options
 presetNames.forEach(name => {
   const option = document.createElement('option');
   option.value = name;
@@ -227,20 +288,19 @@ presetNames.forEach(name => {
   presetSelect.appendChild(option);
 });
 
-// Style the select element
+// select css
 presetSelect.style.position = 'absolute';
 presetSelect.style.top = '50%';
 presetSelect.style.left = '50%';
 presetSelect.style.transform = 'translate(-50%, -50%)';
-presetSelect.style.backgroundColor = '#caaf74'; // Transparent-ish gold background
-presetSelect.style.border = '2px #f2cd75'; // Optional: border to define the edges
-presetSelect.style.padding = '10px'; // Optional: padding for better appearance
-presetSelect.style.fontSize = '16px'; // Optional: adjust font size
+presetSelect.style.backgroundColor = '#caaf74'; 
+presetSelect.style.border = '2px #f2cd75';
+presetSelect.style.padding = '10px'; 
+presetSelect.style.fontSize = '16px'; 
 
-presetSelect.style.zIndex = '10'; // Ensure it's on top of other content
+presetSelect.style.zIndex = '10'; 
 
 
-// Function to handle the 'change' event
 
 function applyPreset() {
   const selectedPreset = presetSelect.value;
@@ -262,52 +322,6 @@ function applyPreset() {
 presetSelect.addEventListener('change', applyPreset);
 
 
-// function attack(e) {
-//   const obj = keyMap[e];
-
-//   if (obj && !obj.pressed) {
-//     obj.pressed = true;
-//     synth.triggerAttack(obj.note + OCTAVE); // Play the main note
-
-//     // First harmonic: Major third (+4 semitones)
-//     const harmonicNote1 = Tone.Frequency(obj.note + OCTAVE).transpose(4);
-
-//     obj.harmonicTimeout1 = setTimeout(() => {
-//       if (obj.pressed) {
-//         synth.triggerAttack(harmonicNote1);
-//         obj.harmonicPlaying1 = harmonicNote1;
-//       }
-//     }, 500);
-
-//     // Second harmonic: Perfect fifth (+7 semitones)
-//     const harmonicNote2 = Tone.Frequency(obj.note + OCTAVE).transpose(7);
-
-//     obj.harmonicTimeout2 = setTimeout(() => {
-//       if (obj.pressed) {
-//         synth.triggerAttack(harmonicNote2);
-//         obj.harmonicPlaying2 = harmonicNote2;
-//       }
-//     }, 800); // Delayed slightly more than the first harmonic
-//   }
-// }
-
-// function release(e) {
-//   const obj = keyMap[e];
-
-//   if (obj && obj.pressed) {
-//     synth.triggerRelease(obj.note + OCTAVE); // Release the main note
-
-//     // Release the harmonic if it's playing
-//     if (obj.harmonicPlaying) {
-//       synth.triggerRelease(obj.harmonicPlaying);
-//       obj.harmonicPlaying = null;
-//     }
-
-//     obj.pressed = false;
-//     clearTimeout(obj.harmonicTimeout); // Prevent harmonic from triggering if not played yet
-//   }
-// }
-
 function attack(e) {
   const obj = keyMap[e];
 
@@ -317,13 +331,13 @@ function attack(e) {
     
     synth.triggerAttack(mainNote); // Play the main note
 
-    // First harmonic: Major third (+4 semitones)
+    // harmonic1 - major third (+4 semitones)
     obj.harmonic1 = Tone.Frequency(mainNote).transpose(4).toNote();
     obj.harmonicTimeout1 = setTimeout(() => {
       if (obj.pressed) synth.triggerAttack(obj.harmonic1);
     }, 100);
 
-    // Second harmonic: Perfect fifth (+7 semitones)
+    // second harmonic - perfect fifth (+7 semitones)
     obj.harmonic2 = Tone.Frequency(mainNote).transpose(7).toNote();
     obj.harmonicTimeout2 = setTimeout(() => {
       if (obj.pressed) synth.triggerAttack(obj.harmonic2);
@@ -340,7 +354,7 @@ function release(e) {
   const obj = keyMap[e];
 
   if (obj && obj.pressed) {
-    synth.triggerRelease(obj.note + OCTAVE); // Release main note
+    synth.triggerRelease(obj.note + OCTAVE); // release main note
 
     if (obj.harmonic1) synth.triggerRelease(obj.harmonic1);
     if (obj.harmonic2) synth.triggerRelease(obj.harmonic2);
@@ -361,14 +375,13 @@ function attack_down(e) {
     obj.pressed = true;
     const mainNote = obj.note + OCTAVE;
     
-    synth.triggerAttack(mainNote); // Play the main note
+    synth.triggerAttack(mainNote); // play the main note
 
     obj.harmonic1 = Tone.Frequency(mainNote).transpose(-3).toNote();
     obj.harmonicTimeout1 = setTimeout(() => {
       if (obj.pressed) synth.triggerAttack(obj.harmonic1);
     }, 100);
 
-    // Second harmonic: Perfect fifth (+7 semitones)
     obj.harmonic2 = Tone.Frequency(mainNote).transpose(-5).toNote();
     obj.harmonicTimeout2 = setTimeout(() => {
       if (obj.pressed) synth.triggerAttack(obj.harmonic2);
